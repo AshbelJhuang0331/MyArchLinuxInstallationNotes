@@ -1,0 +1,180 @@
+#+TITLE: Arch Linux Installation Note.
+#+DATE: <2017-06-23 Fri>
+#+AUTHOR: 莊傳傑
+#+EMAIL: s8906108@gmail.com
+#+DATE: 2017/06/24
+#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline
+#+OPTIONS: author:t c:nil creator:comment d:(not "LOGBOOK") date:t
+#+OPTIONS: e:t email:nil f:t inline:t num:t p:nil pri:nil stat:t
+#+OPTIONS: tags:t tasks:t tex:t timestamp:t toc:t todo:t |:t
+#+CREATOR: Emacs 25.2.1 (Org mode 8.2.10)
+#+DESCRIPTION:
+#+EXCLUDE_TAGS: noexport
+#+KEYWORDS:
+#+LANGUAGE: en
+#+SELECT_TAGS: export
+#+STARTUP: indent
+
+Just a note of Arch Linux installation.
+
+* Partition
+#+BEGIN_SRC sh :exports code
+
+  fdisk -l
+
+  cfdisk /dev/sdX
+
+  mkfs.ext4 /dev/sdXI
+
+  mkfs.vfat -F32 /dev/sdXK
+
+  mkswap /dev/sdXJ
+
+  swapon /dev/sdXJ
+
+  mount /dev/sdXI /mnt
+
+  mkdir /mnt/boot
+
+  mount /dev/sdXK /mnt/boot
+
+#+END_SRC
+Learn more about partition: https://wiki.archlinux.org/index.php/Partitioning
+
+* Install
+#+BEGIN_SRC sh :exports code
+
+  pacstrap /mnt base base-devel
+
+  genfstab -U /mnt >> /mnt/etc/fstab
+
+#+END_SRC
+Learn more about installation: https://wiki.archlinux.org/index.php/installation_guide
+
+* Configure
+#+BEGIN_SRC sh :exports code
+
+  arch-chroot /mnt
+
+  ln -sf /usr/share/zoneinfo/Asia/Taipei /etc/localtime
+
+  hwclock --systohc
+
+  nano /etc/locale.gen # uncomment en_US.UTF-8 UTF-8
+
+  locale-gen
+
+  echo LANG=en_US.UTF-8 > /etc/locale.conf
+
+  echo "my_hostname" > /etc/hostname # replace "my_hostname" to the hostname you want
+
+  nano /etc/hosts # add "127.0.1.1 my_hostname.localdomain my_hostname" below ::1
+
+  passwd
+
+  pacman -S dosfstools
+
+  pacman -S os-prober
+
+  pacman -S grub efibootmgr
+
+  grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=grub
+
+  pacman -S intel-ucode # if using intel cpu
+
+  grub-mkconfig -o /boot/grub/grub.cfg
+
+  useradd -m -g users "username" # add new user named "username"
+
+  passwd "username"
+
+  nano /etc/sudoers # add "username ALL=(ALL) ALL"
+
+  mkinitcpio -p linux
+
+  exit
+
+  umount -R /mnt
+
+  reboot # After doing this, the os installation is done.
+
+#+END_SRC
+Learn more about grub settings: https://wiki.archlinux.org/index.php/GRUB
+
+* After Installation
+#+BEGIN_SRC sh :exports code
+
+  # First, login to os.
+
+  sudo bash
+
+  systemctl enable dhcpcd.service # if using wired connection and login to OS
+
+  ping 168.95.1.1 # check network reachable
+
+  pacman -Syu # synchronize package databases
+
+
+  # Prepare to install GUI, I use KDE.
+
+  pacman -Syu xorg xterm xorg-twm xorg-xinit xorg-server
+
+  pacman -Syyu
+
+  pacman -S plasma-meta kdebase # install KDE Plasma
+
+  pacman -S ttf-freefont
+
+  systemctl enable sddm.service
+
+
+  # Complete network tools by using networkmanager
+
+  pacman -S networkmanager plasma-nm
+
+  systemctl stop dhcpcd.service
+
+  systemctl disable dhcpcd.service
+
+  systemctl enable NetworkManager
+
+  systemctl start NetworkManager
+
+  pacman -S openconnect networkmanager-openconnect # if need vpn
+
+
+  # Install apps
+
+  # Just install whatever app you want...
+  pacman -S ark firefox qt4 gimp libreoffice flashplugin filezilla chromium emacs atom git
+
+  pacman -S archlinux-wallpaper
+
+  reboot
+
+
+  # After login to GUI OS
+
+  sudo pacman -S gtkmm net-tools flatpak
+
+
+  # AUR
+
+  mkdir ~/builds # just a place to store aur package
+
+  cd ~/builds
+
+  git clone htps://aur.archlinux.org/google-chrome.git # google-chrome as example
+
+  cd google-chrome
+
+  nano PKGBUILD # usually do this to check code, can ignore this
+
+  nano google-chrome.install # usuall do this to check code, can ignore this
+
+  makepkg -s
+
+  sudo pacman -U google-chrome-version.pkg.tar.xz
+
+#+END_SRC
+Learn more about AUR: https://aur.archlinux.org/
